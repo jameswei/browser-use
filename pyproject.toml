@@ -21,6 +21,7 @@ dependencies = [
     # "lmnr[langchain]>=0.4.59",
     "markdownify==0.14.1",
     "langchain-core>=0.3.35",
+    "openai>=1.63.2",
 ]
 
 [project.optional-dependencies]
