@@ -1,4 +1,5 @@
 import os
+import time
 
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
@@ -82,11 +83,12 @@ agent = Agent(
     use_vision=True,
     browser=browser,
     max_actions_per_step=10,
+    generate_gif=os.path.join('.\\tmp\\gif\\', f"{int(time.time())}.gif")
     )
 
 async def main():
     history = await agent.run(max_steps=50)
-    history_file = os.path.join('.\\tmp\\check_my_etree_history\\', f"{agent.agent_id}.json")
+    history_file = os.path.join('.\\tmp\\history\\', f"{agent.state.agent_id}.json")
     agent.save_history(history_file)
     result = history.final_result()
     if result:
