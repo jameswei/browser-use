@@ -148,7 +148,7 @@ class BrowserContextState:
 	State of the browser context
 	"""
 
-	target_id: str | None = None  # CDP target ID
+	current_page_id: int = 0
 
 
 class BrowserContext:
@@ -156,7 +156,7 @@ class BrowserContext:
 		self,
 		browser: 'Browser',
 		config: BrowserContextConfig = BrowserContextConfig(),
-		state: Optional[BrowserContextState] = None,
+		state: BrowserContextState | None = None,
 	):
 		self.context_id = str(uuid.uuid4())
 		logger.debug(f'Initializing new browser context with id: {self.context_id}')
@@ -195,6 +195,14 @@ class BrowserContext:
 				except Exception as e:
 					logger.debug(f'Failed to remove CDP listener: {e}')
 				self._page_event_handler = None
+
+			# Remove any remaining CDP protocol listeners
+			if self._get_current_page(self.session):
+				try:
+					self._get_current_page(self.session).remove_listener('request', None)
+					self._get_current_page(self.session).remove_listener('response', None)
+				except Exception as e:
+					logger.debug(f'Failed to remove page listeners: {e}')
 
 			await self.save_cookies()
 
@@ -241,47 +249,20 @@ class BrowserContext:
 
 		# Get or create a page to use
 		pages = context.pages
+		current_page_id = len(pages) - 1 if pages else 0
+
+		if pages:
+			logger.debug('Reusing existing page')
+		else:
+			await context.new_page()
+			logger.debug('Created new page')
 
 		self.session = BrowserSession(
 			context=context,
 			cached_state=None,
 		)
 
-		active_page = None
-		if self.browser.config.cdp_url:
-			# If we have a saved target ID, try to find and activate it
-			if self.state.target_id:
-				targets = await self._get_cdp_targets()
-				for target in targets:
-					if target['targetId'] == self.state.target_id:
-						# Find matching page by URL
-						for page in pages:
-							if page.url == target['url']:
-								active_page = page
-								break
-						break
-
-		# If no target ID or couldn't find it, use existing page or create new
-		if not active_page:
-			if pages:
-				active_page = pages[0]
-				logger.debug('Using existing page')
-			else:
-				active_page = await context.new_page()
-				logger.debug('Created new page')
-
-			# Get target ID for the active page
-			if self.browser.config.cdp_url:
-				targets = await self._get_cdp_targets()
-				for target in targets:
-					if target['url'] == active_page.url:
-						self.state.target_id = target['targetId']
-						break
-
-		# Bring page to front
-		await active_page.bring_to_front()
-		await active_page.wait_for_load_state('load')
-
+		self.state.current_page_id = current_page_id
 		return self.session
 
 	def _add_new_page_listener(self, context: PlaywrightBrowserContext):
@@ -291,7 +272,7 @@ class BrowserContext:
 			await page.wait_for_load_state()
 			logger.debug(f'New page opened: {page.url}')
 			if self.session is not None:
-				self.state.target_id = None
+				self.state.current_page_id = len(self.session.context.pages) - 1
 
 		self._page_event_handler = on_page
 		context.on('page', on_page)
@@ -305,7 +286,7 @@ class BrowserContext:
 	async def get_current_page(self) -> Page:
 		"""Get the current page"""
 		session = await self.get_session()
-		return await self._get_current_page(session)
+		return self._get_current_page(session)
 
 	async def _create_context(self, browser: PlaywrightBrowser):
 		"""Creates a new browser context with anti-detection measures and loads cookies if available."""
@@ -650,7 +631,7 @@ class BrowserContext:
 	async def close_current_tab(self):
 		"""Close the current tab"""
 		session = await self.get_session()
-		page = await self._get_current_page(session)
+		page = self._get_current_page(session)
 		await page.close()
 
 		# Switch to the first available tab if any exist
@@ -767,8 +748,8 @@ class BrowserContext:
 			# Get all available pages
 			pages = session.context.pages
 			if pages:
-				self.state.target_id = None
-				page = await self._get_current_page(session)
+				self.state.current_page_id = len(pages) - 1
+				page = self._get_current_page(session)
 				logger.debug(f'Switched to page: {await page.title()}')
 			else:
 				raise BrowserError('Browser closed: no valid pages available')
@@ -1191,13 +1172,7 @@ class BrowserContext:
 		if not self._is_url_allowed(page.url):
 			raise BrowserError(f'Cannot switch to tab with non-allowed URL: {page.url}')
 
-		# Update target ID if using CDP
-		if self.browser.config.cdp_url:
-			targets = await self._get_cdp_targets()
-			for target in targets:
-				if target['url'] == page.url:
-					self.state.target_id = target['targetId']
-					break
+		self.state.current_page_id = page_id
 
 		await page.bring_to_front()
 		await page.wait_for_load_state()
@@ -1210,6 +1185,8 @@ class BrowserContext:
 
 		session = await self.get_session()
 		new_page = await session.context.new_page()
+		self.state.current_page_id = len(session.context.pages) - 1
+
 		await new_page.wait_for_load_state()
 
 		if url:
@@ -1227,20 +1204,16 @@ class BrowserContext:
 	# endregion
 
 	# region - Helper methods for easier access to the DOM
-	async def _get_current_page(self, session: BrowserSession) -> Page:
+	def _get_current_page(self, session: BrowserSession) -> Page:
 		pages = session.context.pages
 
-		# Try to find page by target ID if using CDP
-		if self.browser.config.cdp_url and self.state.target_id:
-			targets = await self._get_cdp_targets()
-			for target in targets:
-				if target['targetId'] == self.state.target_id:
-					for page in pages:
-						if page.url == target['url']:
-							return page
+		# if not len(pages):
+		# 	raise BrowserError('No pages found')
 
-		# Fallback to last page
-		return pages[-1] if pages else await session.context.new_page()
+		if self.state.current_page_id >= len(pages):
+			self.state.current_page_id = len(pages) - 1
+
+		return pages[self.state.current_page_id]
 
 	async def get_selector_map(self) -> SelectorMap:
 		session = await self.get_session()
@@ -1322,7 +1295,7 @@ class BrowserContext:
 			await page.close()
 
 		session.cached_state = None
-		self.state.target_id = None
+		self.state.current_page_id = len(session.context.pages) - 1
 
 	async def _get_unique_filename(self, directory, filename):
 		"""Generate a unique filename by appending (1), (2), etc., if a file already exists."""

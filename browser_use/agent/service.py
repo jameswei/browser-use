@@ -92,7 +92,7 @@ class Agent(Generic[Context]):
 		# Cloud Callbacks
 		register_new_step_callback: Callable[['BrowserState', 'AgentOutput', int], Awaitable[None]] | None = None,
 		register_done_callback: Callable[['AgentHistoryList'], Awaitable[None]] | None = None,
-		register_external_agent_status_raise_error_callback: Callable[[], Awaitable[bool]] | None = None,
+		register_external_agent_status_raise_error_callback: Callable[[], Awaitable[None]] | None = None,
 		# Agent settings
 		use_vision: bool = True,
 		use_vision_for_planner: bool = False,
@@ -212,6 +212,15 @@ class Agent(Generic[Context]):
 		self.register_new_step_callback = register_new_step_callback
 		self.register_done_callback = register_done_callback
 		self.register_external_agent_status_raise_error_callback = register_external_agent_status_raise_error_callback
+
+		# Action setup
+		self._setup_action_models()
+		self._set_browser_use_version_and_source()
+		self.initial_actions = self._convert_initial_actions(initial_actions) if initial_actions else None
+
+		# Model setup
+		self._set_model_names()
+		self.tool_calling_method = self.set_tool_calling_method(self.settings.tool_calling_method)
 
 		# Context
 		self.context = context
@@ -353,9 +362,6 @@ class Agent(Generic[Context]):
 				logger.info('Last step finishing up')
 				self._message_manager._add_message_with_tokens(HumanMessage(content=msg))
 				self.AgentOutput = self.DoneAgentOutput
-
-			input_messages = self._message_manager.get_messages()
-			tokens = self._message_manager.state.history.current_tokens
 
 			try:
 				model_output = await self.get_next_action(input_messages)
