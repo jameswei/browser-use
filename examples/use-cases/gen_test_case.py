@@ -60,7 +60,10 @@ class TestCaseGenerator:
                 messages=self.messages,
                 response_format={"type": "json_object"}
             )
-            return json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            if content is None:
+                return {"error": "No content received from API"}
+            return json.loads(content)
         except Exception as e:
             return {
                 "error": str(e)
