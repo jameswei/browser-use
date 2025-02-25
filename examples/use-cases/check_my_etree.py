@@ -88,7 +88,7 @@ agent = Agent(
 
 async def main():
     history = await agent.run(max_steps=50)
-    history_file = os.path.join('.\\tmp\\history\\', f"{agent.state.agent_id}.json")
+    history_file = os.path.join('.\\tmp\\history\\', f"{int(time.time())}.json")
     agent.save_history(history_file)
     result = history.final_result()
     if result:
