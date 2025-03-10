@@ -63,21 +63,16 @@ browser = Browser(
 		headless=False,
 		disable_security=True,
 		chrome_instance_path='C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\Application\\msedge.exe',
-		extra_chromium_args=['--profile-directory=Profile 1'] + ['--user-data-dir=C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\User Data\\'],
-        # new_context_config=BrowserContextConfig(
-        #     trace_path='./tmp/check_my_etree_trace',
-        #     save_recording_path='./tmp/check_my_etree_recording',
-        #     no_viewport=False,
-		# 	browser_window_size={
-		# 		'width': 1280,
-		# 		'height': 1100,
-		# 	},
-		# ),
+		extra_chromium_args=['--profile-directory=Profile 1'] + ['--user-data-dir=C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\User Data\\', '--enable-features=msWalletCheckoutDebugDAF'],
     )
 )
 
+temp_task = """
+- first go to page 'https://environmentamerica.org/take-action/donate-today/?amount=50&recurring=no'.
+- then wait for 60 seconds on the page.
+"""
 agent = Agent(
-    task=task,
+    task=temp_task,
     initial_actions=initial_actions,
     llm=ChatOpenAI(model="gpt-4o"),
     use_vision=True,
