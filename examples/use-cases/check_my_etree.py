@@ -62,20 +62,28 @@ browser = Browser(
 	config=BrowserConfig(
 		headless=False,
 		disable_security=True,
-		chrome_instance_path='C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\Application\\msedge.exe',
-		extra_chromium_args=['--profile-directory=Profile 1'] + ['--user-data-dir=C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\User Data\\', '--enable-features=msWalletCheckoutDebugDAF'],
+		# chrome_instance_path='C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\Application\\msedge.exe',
+		# extra_chromium_args=['--profile-directory=Profile 1'] + ['--user-data-dir=C:\\Users\\wjia\\AppData\\Local\\Microsoft\\Edge SxS\\User Data\\', '--enable-features=msWalletCheckoutDebugDAF'],
     )
 )
 
+# temp_task = """
+# - first go to page 'https://environmentamerica.org/take-action/donate-today/?amount=50&recurring=no'.
+# - then wait for 60 seconds on the page.
+# """
 temp_task = """
-- first go to page 'https://environmentamerica.org/take-action/donate-today/?amount=50&recurring=no'.
-- then wait for 60 seconds on the page.
+- Go to 'https://copilot.microsoft.com' page.
+- Click 'Sign in' button at the top right corner, then click 'Sign in' again in the drop-down menu. You'll be redirected to a login page.
+- Input 'msxpayteam01@outlook.com' as the username, then click 'Next'.
+- Input '10maetyapxsm' as the password, then click 'Sign in'.
+- If prompted with 'Stay signed in?', click 'No'.
+- After signed in, wait for few seconds to load the page completely, then click the 'Microphone' icon at the bottom right corner.
+- Wait for 5 minutes. 
 """
 agent = Agent(
     task=temp_task,
-    initial_actions=initial_actions,
+    # initial_actions=initial_actions,
     llm=ChatOpenAI(model="gpt-4o"),
-    use_vision=True,
     browser=browser,
     max_actions_per_step=10,
     generate_gif=os.path.join('.\\tmp\\gif\\', f"{int(time.time())}.gif")
