@@ -95,7 +95,6 @@
       PERF_METRICS.buildDomTreeBreakdown.domOperations[name] += duration;
       PERF_METRICS.buildDomTreeBreakdown.domOperationCounts[name]++;
     }
-
     return result;
   }
 
@@ -112,7 +111,6 @@
   // Cache helper functions
   function getCachedBoundingRect(element) {
     if (!element) return null;
-
     if (DOM_CACHE.boundingRects.has(element)) {
       if (debugMode && PERF_METRICS) {
         PERF_METRICS.cacheMetrics.boundingRectCacheHits++;
@@ -123,7 +121,6 @@
     if (debugMode && PERF_METRICS) {
       PERF_METRICS.cacheMetrics.boundingRectCacheMisses++;
     }
-
     let rect;
     if (debugMode) {
       const start = performance.now();
@@ -136,7 +133,6 @@
     } else {
       rect = element.getBoundingClientRect();
     }
-
     if (rect) {
       DOM_CACHE.boundingRects.set(element, rect);
     }
@@ -145,7 +141,6 @@
 
   function getCachedComputedStyle(element) {
     if (!element) return null;
-
     if (DOM_CACHE.computedStyles.has(element)) {
       if (debugMode && PERF_METRICS) {
         PERF_METRICS.cacheMetrics.computedStyleCacheHits++;
@@ -156,7 +151,6 @@
     if (debugMode && PERF_METRICS) {
       PERF_METRICS.cacheMetrics.computedStyleCacheMisses++;
     }
-
     let style;
     if (debugMode) {
       const start = performance.now();
@@ -169,7 +163,6 @@
     } else {
       style = window.getComputedStyle(element);
     }
-
     if (style) {
       DOM_CACHE.computedStyles.set(element, style);
     }
@@ -214,7 +207,6 @@
         () => element.getBoundingClientRect(),
         'getBoundingClientRect'
       );
-
       if (!rect) return index;
 
       // Generate a color based on the index
@@ -419,13 +411,11 @@
   // Helper function to check if element is accepted
   function isElementAccepted(element) {
     if (!element || !element.tagName) return false;
-
     // Always accept body and common container elements
     const alwaysAccept = new Set([
       "body", "div", "main", "article", "section", "nav", "header", "footer"
     ]);
     const tagName = element.tagName.toLowerCase();
-
     if (alwaysAccept.has(tagName)) return true;
 
     const leafElementDenyList = new Set([
@@ -437,7 +427,6 @@
       "noscript",
       "template",
     ]);
-
     return !leafElementDenyList.has(tagName);
   }
 
@@ -670,7 +659,7 @@
 
     // If we're in an iframe, elements are considered top by default
     if (doc !== window.document) {
-      return true;
+        return true;
     }
 
     // For shadow DOM, we need to check within its own root context
@@ -712,7 +701,7 @@
       }
       return false;
     } catch (e) {
-      return true;
+        return true;
     }
   }
 
@@ -721,7 +710,7 @@
    */
   function isInExpandedViewport(element, viewportExpansion) {
     if (viewportExpansion === -1) {
-      return true;
+        return true;
     }
 
     const rect = getCachedBoundingRect(element);
@@ -740,6 +729,15 @@
     let currentEl = element;
     let scrollX = 0;
     let scrollY = 0;
+    
+    return measureDomOperation(() => {
+      while (currentEl && currentEl !== document.documentElement) {
+          if (currentEl.scrollLeft || currentEl.scrollTop) {
+              scrollX += currentEl.scrollLeft;
+              scrollY += currentEl.scrollTop;
+          }
+          currentEl = currentEl.parentElement;
+      }
 
     return measureDomOperation(() => {
       while (currentEl && currentEl !== document.documentElement) {
@@ -762,7 +760,6 @@
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
 
     const tagName = element.tagName.toLowerCase();
-
     // Fast-path for common interactive elements
     const interactiveElements = new Set([
       "a", "button", "input", "select", "textarea", "details", "summary"
@@ -926,7 +923,6 @@
     // Process children, with special handling for iframes and rich text editors
     if (node.tagName) {
       const tagName = node.tagName.toLowerCase();
-
       // Handle iframes
       if (tagName === "iframe") {
         try {
@@ -1005,7 +1001,6 @@
     Object.keys(PERF_METRICS.timings).forEach(key => {
       PERF_METRICS.timings[key] = PERF_METRICS.timings[key] / 1000;
     });
-
     Object.keys(PERF_METRICS.buildDomTreeBreakdown).forEach(key => {
       if (typeof PERF_METRICS.buildDomTreeBreakdown[key] === 'number') {
         PERF_METRICS.buildDomTreeBreakdown[key] = PERF_METRICS.buildDomTreeBreakdown[key] / 1000;
