@@ -729,15 +729,6 @@
     let currentEl = element;
     let scrollX = 0;
     let scrollY = 0;
-    
-    return measureDomOperation(() => {
-      while (currentEl && currentEl !== document.documentElement) {
-          if (currentEl.scrollLeft || currentEl.scrollTop) {
-              scrollX += currentEl.scrollLeft;
-              scrollY += currentEl.scrollTop;
-          }
-          currentEl = currentEl.parentElement;
-      }
 
     return measureDomOperation(() => {
       while (currentEl && currentEl !== document.documentElement) {
@@ -752,7 +743,7 @@
       scrollY += window.scrollY;
 
       return { scrollX, scrollY };
-    }, 'scrollOperations');
+    }, "scrollOperations");
   }
 
   // Add these helper functions at the top level
